@@ -1,3 +1,4 @@
+import axios from "axios";
 import Constants from "expo-constants";
 
 const extra = Constants.expoConfig?.extra as {
@@ -14,10 +15,16 @@ export interface Movie {
 
 export const { API_URL, API_KEY } = extra;
 
-export async function fetchMovies(page: number = 1) {
-  const res = await fetch(
-    `${API_URL}/movie/popular?api_key=${API_KEY}&language=pt-BR&page=${page}`
-  );
-  const data = await res.json();
+export async function fetchMovies(
+  page: number = 1,
+  query: string = ""
+): Promise<Movie[]> {
+  const url = query
+    ? `${API_URL}/search/movie?api_key=${API_KEY}&language=pt-BR&query=${encodeURIComponent(
+        query
+      )}&page=${page}`
+    : `${API_URL}/movie/popular?api_key=${API_KEY}&language=pt-BR&page=${page}`;
+
+  const { data } = await axios.get(url);
   return data.results;
 }
