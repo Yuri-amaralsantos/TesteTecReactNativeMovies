@@ -1,51 +1,59 @@
-import React, { useState } from "react";
-import { View, FlatList, StyleSheet } from "react-native";
-import Header from "../components/Header";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import CardItem from "../components/CardItem";
-
-const cards = [
-  {
-    id: "1",
-    title: "Card 1",
-    description: "Descrição do Card 1",
-    image: require("@/assets/images/partial-react-logo.png"),
-  },
-  {
-    id: "2",
-    title: "Card 2",
-    description: "Descrição do Card 2",
-    image: require("@/assets/images/partial-react-logo.png"),
-  },
-  {
-    id: "3",
-    title: "Card 3",
-    description: "Descrição do Card 3",
-    image: require("@/assets/images/partial-react-logo.png"),
-  },
-];
+import Header from "../components/Header";
+import { fetchMovies } from "../hooks/useMovies";
 
 export default function Home() {
-  const [search, setSearch] = useState("");
+  const [movies, setMovies] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
 
-  const filteredCards = cards.filter((c) =>
-    c.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const loadMovies = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const newMovies = await fetchMovies(page);
+      setMovies((prev) => [...prev, ...newMovies]);
+      setPage((prev) => prev + 1);
+    } catch (err) {
+      console.error("Erro ao carregar filmes:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadMovies();
+  }, []);
 
   return (
     <View style={styles.container}>
-      <Header search={search} setSearch={setSearch} />
+      <Header search={""} setSearch={() => {}} />
 
       <FlatList
-        data={filteredCards}
-        keyExtractor={(item) => item.id}
+        data={movies}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (
           <CardItem
-            item={item}
+            item={{
+              id: item.id.toString(),
+              title: item.title,
+              description: item.overview,
+              image: {
+                uri: `https://image.tmdb.org/t/p/w500${item.poster_path}`,
+              },
+            }}
             onWatched={(id) => console.log("Já assisti:", id)}
             onWantToWatch={(id) => console.log("Quero assistir:", id)}
           />
         )}
+        onEndReached={loadMovies}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          loading ? <ActivityIndicator size="large" color="#000" /> : null
+        }
       />
     </View>
   );
