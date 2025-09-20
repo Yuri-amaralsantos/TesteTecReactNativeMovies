@@ -1,31 +1,60 @@
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import React, { useCallback } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import CardItem from "../components/CardItem";
 import Header from "../components/Header";
-import { fetchMovies } from "../hooks/useMovies";
+import { fetchMovies, Movie } from "../hooks/useMovies";
 
 export default function Home() {
-  const [movies, setMovies] = useState<any[]>([]);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+  } = useInfiniteQuery<Movie[], Error>({
+    queryKey: ["movies"],
+    queryFn: async (context) => {
+      const page = (context.pageParam as number | undefined) ?? 1;
+      return fetchMovies(page);
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.length === 0) return undefined;
+      return allPages.length + 1;
+    },
+  });
 
-  const loadMovies = async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      const newMovies = await fetchMovies(page);
-      setMovies((prev) => [...prev, ...newMovies]);
-      setPage((prev) => prev + 1);
-    } catch (err) {
-      console.error("Erro ao carregar filmes:", err);
-    } finally {
-      setLoading(false);
+  const movies: Movie[] = data?.pages.flat() ?? [];
+
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
     }
-  };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  useEffect(() => {
-    loadMovies();
-  }, []);
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>Failed to load movies.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -33,7 +62,7 @@ export default function Home() {
 
       <FlatList
         data={movies}
-        keyExtractor={(item, index) => `${item.id}-${index}`}
+        keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (
           <CardItem
@@ -49,10 +78,12 @@ export default function Home() {
             onWantToWatch={(id) => console.log("Quero assistir:", id)}
           />
         )}
-        onEndReached={loadMovies}
+        onEndReached={loadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={
-          loading ? <ActivityIndicator size="large" color="#000" /> : null
+          isFetchingNextPage ? (
+            <ActivityIndicator size="large" color="#000" />
+          ) : null
         }
       />
     </View>
@@ -62,4 +93,5 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f5f5f5" },
   listContent: { padding: 16, paddingBottom: 32 },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
