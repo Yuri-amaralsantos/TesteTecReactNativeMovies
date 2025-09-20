@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 import Header from "../components/Header";
 import CardItem from "../components/CardItem";
-import OptionsModal from "../components/OptionsModal";
 
 const cards = [
   {
@@ -26,9 +25,6 @@ const cards = [
 ];
 
 export default function Home() {
-  const [selectedCard, setSelectedCard] = useState<(typeof cards)[0] | null>(
-    null
-  );
   const [search, setSearch] = useState("");
 
   const filteredCards = cards.filter((c) =>
@@ -44,22 +40,12 @@ export default function Home() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (
-          <CardItem item={item} onPress={() => setSelectedCard(item)} />
+          <CardItem
+            item={item}
+            onWatched={(id) => console.log("Já assisti:", id)}
+            onWantToWatch={(id) => console.log("Quero assistir:", id)}
+          />
         )}
-      />
-
-      <OptionsModal
-        visible={!!selectedCard}
-        title={selectedCard?.title}
-        onClose={() => setSelectedCard(null)}
-        onWatched={() => {
-          console.log("Já assistido", selectedCard?.id);
-          setSelectedCard(null);
-        }}
-        onWantWatch={() => {
-          console.log("Quero Assistir", selectedCard?.id);
-          setSelectedCard(null);
-        }}
       />
     </View>
   );
