@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import ScheduleModal from "./ScheduleModal";
 
 interface CardItemProps {
   item: { id: string; title: string; description: string | null; image: any };
@@ -15,6 +16,7 @@ export default function CardItem({
 }: CardItemProps) {
   const [status, setStatus] = useState<"watched" | "want" | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const STORAGE_KEY = `movie_status_${item.id}`;
 
@@ -55,7 +57,10 @@ export default function CardItem({
     const newStatus = status === "want" ? null : "want";
     setStatus(newStatus);
     saveStatus(newStatus);
-    if (newStatus === "want") onWantToWatch(item.id);
+    if (newStatus === "want") {
+      onWantToWatch(item.id);
+      setShowModal(true);
+    }
   };
 
   const description =
@@ -106,6 +111,13 @@ export default function CardItem({
           </TouchableOpacity>
         </View>
       </View>
+
+      <ScheduleModal
+        visible={showModal}
+        onClose={() => setShowModal(false)}
+        movieTitle={item.title}
+        onJustMark={() => onWantToWatch(item.id)}
+      />
     </View>
   );
 }
