@@ -17,7 +17,7 @@ interface ScheduleModalProps {
   visible: boolean;
   onClose: () => void;
   movieTitle: string;
-  onJustMark: () => void;
+  onJustMark: (eventId: string) => void;
 }
 
 export default function ScheduleModal({
@@ -37,10 +37,18 @@ export default function ScheduleModal({
 
   const getTodayString = () => {
     const now = new Date();
+    if (now.getHours() >= 23) {
+      const tomorrow = new Date(now);
+      tomorrow.setDate(now.getDate() + 1);
+      const year = tomorrow.getFullYear();
+      const month = (tomorrow.getMonth() + 1).toString().padStart(2, "0");
+      const day = tomorrow.getDate().toString().padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
     const year = now.getFullYear();
     const month = (now.getMonth() + 1).toString().padStart(2, "0");
     const day = now.getDate().toString().padStart(2, "0");
-    console.log(day);
     return `${year}-${month}-${day}`;
   };
 
@@ -52,19 +60,27 @@ export default function ScheduleModal({
   const getAvailableHours = () => {
     const now = new Date();
     const hours: number[] = [];
+
     for (let h = 0; h < 24; h++) {
-      if (isSameDayLocal(date, now) && h < now.getHours()) continue;
+      if (isSameDayLocal(date, now)) {
+        if (h < now.getHours()) continue;
+
+        if (h === now.getHours() && now.getMinutes() > 0) continue;
+      }
       hours.push(h);
     }
-    console.log("Horas disponíveis:", hours, "para o dia:", date);
+
     return hours;
   };
 
-  const addMovieToCalendar = async (title: string, chosenDate: Date) => {
+  const addMovieToCalendar = async (
+    title: string,
+    chosenDate: Date
+  ): Promise<string | null> => {
     const { status } = await Calendar.requestCalendarPermissionsAsync();
     if (status !== "granted") {
       alert("Permissão para acessar calendário negada!");
-      return;
+      return null;
     }
 
     const calendars = await Calendar.getCalendarsAsync(
@@ -75,7 +91,7 @@ export default function ScheduleModal({
     const startDate = chosenDate;
     const endDate = new Date(chosenDate.getTime() + 2 * 60 * 60 * 1000);
 
-    await Calendar.createEventAsync(defaultCalendar.id, {
+    const eventId = await Calendar.createEventAsync(defaultCalendar.id, {
       title: `Assistir: ${title}`,
       startDate,
       endDate,
@@ -84,9 +100,10 @@ export default function ScheduleModal({
 
     Alert.alert("Sucesso", "Filme adicionado ao calendário!");
     handleClose();
+    return eventId;
   };
 
-  const onConfirm = () => {
+  const onConfirm = async () => {
     const chosenDate = new Date(date);
     chosenDate.setHours(hour, 0, 0, 0);
 
@@ -99,11 +116,14 @@ export default function ScheduleModal({
       return;
     }
 
-    addMovieToCalendar(movieTitle, chosenDate);
+    const eventId = await addMovieToCalendar(movieTitle, chosenDate);
+    if (eventId) {
+      onJustMark(eventId);
+    }
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="fade">
       <View style={styles.modalOverlay}>
         <View style={styles.modalBox}>
           <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
@@ -117,7 +137,6 @@ export default function ScheduleModal({
               <Button
                 title="Não"
                 onPress={() => {
-                  onJustMark();
                   handleClose();
                 }}
               />
@@ -131,7 +150,7 @@ export default function ScheduleModal({
               <RNCalendar
                 onDayPress={(day) => {
                   const [y, m, d] = day.dateString.split("-").map(Number);
-                  setDate(new Date(y, m - 1, d)); // Cria a data no horário local
+                  setDate(new Date(y, m - 1, d));
                 }}
                 minDate={getTodayString()}
                 markedDates={{
@@ -140,7 +159,9 @@ export default function ScheduleModal({
                     .padStart(2, "0")}-${date
                     .getDate()
                     .toString()
-                    .padStart(2, "0")}`]: { selected: true },
+                    .padStart(2, "0")}`]: {
+                    selected: true,
+                  },
                 }}
               />
 

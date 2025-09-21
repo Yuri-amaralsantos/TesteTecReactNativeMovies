@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Calendar from "expo-calendar";
 import React, { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import ScheduleModal from "./ScheduleModal";
@@ -17,6 +18,7 @@ export default function CardItem({
   const [status, setStatus] = useState<"watched" | "want" | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [calendarEventId, setCalendarEventId] = useState<string | null>(null);
 
   const STORAGE_KEY = `movie_status_${item.id}`;
 
@@ -53,13 +55,22 @@ export default function CardItem({
     if (newStatus === "watched") onWatched(item.id);
   };
 
-  const handleWant = () => {
-    const newStatus = status === "want" ? null : "want";
+  const handleWant = async () => {
+    let newStatus: "want" | null = status === "want" ? null : "want";
     setStatus(newStatus);
     saveStatus(newStatus);
+
     if (newStatus === "want") {
       onWantToWatch(item.id);
       setShowModal(true);
+    } else if (newStatus === null && calendarEventId) {
+      try {
+        await Calendar.deleteEventAsync(calendarEventId);
+        setCalendarEventId(null);
+        console.log("Evento removido do calendário");
+      } catch (err) {
+        console.error("Erro ao remover evento do calendário:", err);
+      }
     }
   };
 
@@ -116,7 +127,7 @@ export default function CardItem({
         visible={showModal}
         onClose={() => setShowModal(false)}
         movieTitle={item.title}
-        onJustMark={() => onWantToWatch(item.id)}
+        onJustMark={(eventId: string) => setCalendarEventId(eventId)}
       />
     </View>
   );
