@@ -8,12 +8,11 @@ O app foi desenvolvido como parte de um teste técnico para a empresa L2, avalia
 ## Funcionalidades
 
 ✅ Exibição do catálogo – Listar filmes obtidos da API do TMDb
+
 ✅ Busca de filmes – Permitir que o usuário pesquise por um filme específico
-✅ Gerenciamento pessoal – O usuário pode marcar filmes como:
 
-Já assistido
+✅ Gerenciamento pessoal – O usuário pode marcar filmes como: Já assistido ou Quero assistir
 
-## Quero assistir
 ✅ Persistência local – Informações sobre o status de cada filme são salvas localmente no dispositivo
 
 ## Funcionalidade opcional implementada:
@@ -22,24 +21,24 @@ Já assistido
 
 ## Como rodar o projeto
 
-Clone o repositório:
+### Clone o repositório:
 
 git clone https://github.com/Yuri-amaralsantos/MovieCatalogApp.git
 
 
-Instale as dependências:
+### Instale as dependências:
 
 npm install
 
 
-Variáveis de ambiente:
+### Variáveis de ambiente:
 Crie um arquivo .env na raiz do projeto e adicione sua chave da API do TMDb:
 
 API_KEY="api gerada no site do tmdb, exemplo 014e1e7d8488e5f62138421a6a3c9438" 
 API_URL=https://api.themoviedb.org/3
 
 
-Execute o projeto:
+### Execute o projeto:
 
 npx expo start
 
@@ -49,19 +48,27 @@ O app poderá ser visualizado no Expo Go ou em um emulador/simulador.
 ## Tecnologias Utilizadas
 
 🔹 React Native – Construção da interface mobile
+
 🔹 Expo – Facilita o desenvolvimento e execução do app
+
 🔹 React Query – Consumo e cache da API
+
 🔹 AsyncStorage – Persistência local de dados do usuário
+
 🔹 TypeScript – Tipagem estática para maior segurança do código
 
 ## Estrutura do Projeto
 /src
- ├─ /components      # Componentes reutilizáveis
- ├─ /app             # página principal e layout
- ├─ /hooks           # Serviços e integração com a API
+
+ ─ /components      # Componentes reutilizáveis
+
+ ─ /app             # página principal e layout
+
+ ─ /hooks           # Serviços e integração com a API
 
 
 ## Desenvolvedor
 
-Yuri Amaral Santos 🚀
+Yuri Amaral Santos 
+Email: yuri.a.santos12@gmail.com
 
