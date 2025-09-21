@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface CardItemProps {
-  item: { id: string; title: string; description: string; image: any };
+  item: { id: string; title: string; description: string | null; image: any };
   onWatched: (id: string) => void;
   onWantToWatch: (id: string) => void;
 }
@@ -14,6 +14,7 @@ export default function CardItem({
   onWantToWatch,
 }: CardItemProps) {
   const [status, setStatus] = useState<"watched" | "want" | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const STORAGE_KEY = `movie_status_${item.id}`;
 
@@ -57,12 +58,31 @@ export default function CardItem({
     if (newStatus === "want") onWantToWatch(item.id);
   };
 
+  const description =
+    item.description && item.description.trim() !== ""
+      ? item.description
+      : "Sem descrição disponível.";
+
   return (
     <View style={styles.card}>
       <Image source={item.image} style={styles.cardImage} resizeMode="cover" />
       <View style={styles.cardText}>
         <Text style={styles.title}>{item.title}</Text>
-        <Text numberOfLines={3}>{item.description}</Text>
+
+        <Text
+          numberOfLines={expanded ? undefined : 2}
+          style={styles.description}
+        >
+          {description}
+        </Text>
+
+        {description.length > 100 && (
+          <TouchableOpacity onPress={() => setExpanded(!expanded)}>
+            <Text style={styles.seeMore}>
+              {expanded ? "Ver menos" : "Ver mais"}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.buttonRow}>
           <TouchableOpacity
@@ -104,6 +124,16 @@ const styles = StyleSheet.create({
   cardImage: { width: "100%", height: 140 },
   cardText: { padding: 12 },
   title: { fontSize: 16, fontWeight: "bold", marginBottom: 8 },
+  description: {
+    fontSize: 14,
+    color: "#333",
+    lineHeight: 20,
+  },
+  seeMore: {
+    color: "#1E90FF",
+    marginTop: 4,
+    fontWeight: "600",
+  },
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
