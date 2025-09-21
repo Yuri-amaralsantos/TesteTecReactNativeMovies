@@ -1,5 +1,6 @@
-import React from "react";
-import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useState } from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 interface CardItemProps {
   item: { id: string; title: string; description: string; image: any };
@@ -12,24 +13,74 @@ export default function CardItem({
   onWatched,
   onWantToWatch,
 }: CardItemProps) {
+  const [status, setStatus] = useState<"watched" | "want" | null>(null);
+
+  const STORAGE_KEY = `movie_status_${item.id}`;
+
+  useEffect(() => {
+    const loadStatus = async () => {
+      try {
+        const saved = await AsyncStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          setStatus(saved as "watched" | "want");
+        }
+      } catch (err) {
+        console.error("Erro ao carregar status:", err);
+      }
+    };
+    loadStatus();
+  }, [STORAGE_KEY]);
+
+  const saveStatus = async (newStatus: "watched" | "want" | null) => {
+    try {
+      if (newStatus) {
+        await AsyncStorage.setItem(STORAGE_KEY, newStatus);
+      } else {
+        await AsyncStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (err) {
+      console.error("Erro ao salvar status:", err);
+    }
+  };
+
+  const handleWatched = () => {
+    const newStatus = status === "watched" ? null : "watched";
+    setStatus(newStatus);
+    saveStatus(newStatus);
+    if (newStatus === "watched") onWatched(item.id);
+  };
+
+  const handleWant = () => {
+    const newStatus = status === "want" ? null : "want";
+    setStatus(newStatus);
+    saveStatus(newStatus);
+    if (newStatus === "want") onWantToWatch(item.id);
+  };
+
   return (
     <View style={styles.card}>
       <Image source={item.image} style={styles.cardImage} resizeMode="cover" />
       <View style={styles.cardText}>
         <Text style={styles.title}>{item.title}</Text>
-        <Text>{item.description}</Text>
+        <Text numberOfLines={3}>{item.description}</Text>
 
         <View style={styles.buttonRow}>
           <TouchableOpacity
-            style={[styles.button, styles.watched]}
-            onPress={() => onWatched(item.id)}
+            style={[
+              styles.button,
+              status === "watched" ? styles.active : styles.inactive,
+            ]}
+            onPress={handleWatched}
           >
             <Text style={styles.buttonText}>Já assisti</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.button, styles.want]}
-            onPress={() => onWantToWatch(item.id)}
+            style={[
+              styles.button,
+              status === "want" ? styles.active : styles.inactive,
+            ]}
+            onPress={handleWant}
           >
             <Text style={styles.buttonText}>Quero assistir</Text>
           </TouchableOpacity>
@@ -64,8 +115,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginHorizontal: 4,
   },
-  watched: { backgroundColor: "#4CAF50" },
-  want: { backgroundColor: "#2196F3" },
+  active: { backgroundColor: "#4CAF50" },
+  inactive: { backgroundColor: "#B0B0B0" },
   buttonText: {
     color: "white",
     textAlign: "center",
