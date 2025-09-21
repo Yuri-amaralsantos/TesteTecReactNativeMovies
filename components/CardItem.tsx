@@ -1,7 +1,7 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Calendar from "expo-calendar";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useCalendar } from "../hooks/useCalendar";
+import { useMovieStatus } from "../hooks/useMovieStatus";
 import ScheduleModal from "./ScheduleModal";
 
 interface CardItemProps {
@@ -15,62 +15,26 @@ export default function CardItem({
   onWatched,
   onWantToWatch,
 }: CardItemProps) {
-  const [status, setStatus] = useState<"watched" | "want" | null>(null);
+  const { status, toggleStatus } = useMovieStatus(item.id);
+  const { addEvent, removeEvent } = useCalendar();
   const [expanded, setExpanded] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [calendarEventId, setCalendarEventId] = useState<string | null>(null);
 
-  const STORAGE_KEY = `movie_status_${item.id}`;
-
-  useEffect(() => {
-    const loadStatus = async () => {
-      try {
-        const saved = await AsyncStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          setStatus(saved as "watched" | "want");
-        }
-      } catch (err) {
-        console.error("Erro ao carregar status:", err);
-      }
-    };
-    loadStatus();
-  }, [STORAGE_KEY]);
-
-  const saveStatus = async (newStatus: "watched" | "want" | null) => {
-    try {
-      if (newStatus) {
-        await AsyncStorage.setItem(STORAGE_KEY, newStatus);
-      } else {
-        await AsyncStorage.removeItem(STORAGE_KEY);
-      }
-    } catch (err) {
-      console.error("Erro ao salvar status:", err);
-    }
-  };
-
-  const handleWatched = () => {
-    const newStatus = status === "watched" ? null : "watched";
-    setStatus(newStatus);
-    saveStatus(newStatus);
+  const handleWatched = async () => {
+    const newStatus = await toggleStatus("watched");
     if (newStatus === "watched") onWatched(item.id);
   };
 
   const handleWant = async () => {
-    let newStatus: "want" | null = status === "want" ? null : "want";
-    setStatus(newStatus);
-    saveStatus(newStatus);
+    const newStatus = await toggleStatus("want");
 
     if (newStatus === "want") {
       onWantToWatch(item.id);
       setShowModal(true);
     } else if (newStatus === null && calendarEventId) {
-      try {
-        await Calendar.deleteEventAsync(calendarEventId);
-        setCalendarEventId(null);
-        console.log("Evento removido do calendário");
-      } catch (err) {
-        console.error("Erro ao remover evento do calendário:", err);
-      }
+      await removeEvent(calendarEventId);
+      setCalendarEventId(null);
     }
   };
 
@@ -147,16 +111,8 @@ const styles = StyleSheet.create({
   cardImage: { width: "100%", height: 140 },
   cardText: { padding: 12 },
   title: { fontSize: 16, fontWeight: "bold", marginBottom: 8 },
-  description: {
-    fontSize: 14,
-    color: "#333",
-    lineHeight: 20,
-  },
-  seeMore: {
-    color: "#1E90FF",
-    marginTop: 4,
-    fontWeight: "600",
-  },
+  description: { fontSize: 14, color: "#333", lineHeight: 20 },
+  seeMore: { color: "#1E90FF", marginTop: 4, fontWeight: "600" },
   buttonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -170,9 +126,5 @@ const styles = StyleSheet.create({
   },
   active: { backgroundColor: "#4CAF50" },
   inactive: { backgroundColor: "#B0B0B0" },
-  buttonText: {
-    color: "white",
-    textAlign: "center",
-    fontWeight: "bold",
-  },
+  buttonText: { color: "white", textAlign: "center", fontWeight: "bold" },
 });

@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
-import * as Calendar from "expo-calendar";
 import React, { useState } from "react";
 import {
   Alert,
@@ -12,6 +11,9 @@ import {
   View,
 } from "react-native";
 import { Calendar as RNCalendar } from "react-native-calendars";
+import { useAvailableHours } from "../hooks/useAvailableHours";
+import { useCalendar } from "../hooks/useCalendar";
+import { useTodayString } from "../hooks/useTodayString";
 
 interface ScheduleModalProps {
   visible: boolean;
@@ -27,80 +29,16 @@ export default function ScheduleModal({
   onJustMark,
 }: ScheduleModalProps) {
   const [step, setStep] = useState<"choose" | "calendar">("choose");
-  const [date, setDate] = useState<Date>(new Date());
-  const [hour, setHour] = useState<number>(new Date().getHours());
+  const [date, setDate] = useState(new Date());
+  const [hour, setHour] = useState(new Date().getHours());
+
+  const todayString = useTodayString();
+  const availableHours = useAvailableHours(date);
+  const { addEvent } = useCalendar();
 
   const handleClose = () => {
     setStep("choose");
     onClose();
-  };
-
-  const getTodayString = () => {
-    const now = new Date();
-    if (now.getHours() >= 23) {
-      const tomorrow = new Date(now);
-      tomorrow.setDate(now.getDate() + 1);
-      const year = tomorrow.getFullYear();
-      const month = (tomorrow.getMonth() + 1).toString().padStart(2, "0");
-      const day = tomorrow.getDate().toString().padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    }
-
-    const year = now.getFullYear();
-    const month = (now.getMonth() + 1).toString().padStart(2, "0");
-    const day = now.getDate().toString().padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
-  const isSameDayLocal = (d1: Date, d2: Date) =>
-    d1.getFullYear() === d2.getFullYear() &&
-    d1.getMonth() === d2.getMonth() &&
-    d1.getDate() === d2.getDate();
-
-  const getAvailableHours = () => {
-    const now = new Date();
-    const hours: number[] = [];
-
-    for (let h = 0; h < 24; h++) {
-      if (isSameDayLocal(date, now)) {
-        if (h < now.getHours()) continue;
-
-        if (h === now.getHours() && now.getMinutes() > 0) continue;
-      }
-      hours.push(h);
-    }
-
-    return hours;
-  };
-
-  const addMovieToCalendar = async (
-    title: string,
-    chosenDate: Date
-  ): Promise<string | null> => {
-    const { status } = await Calendar.requestCalendarPermissionsAsync();
-    if (status !== "granted") {
-      alert("Permissão para acessar calendário negada!");
-      return null;
-    }
-
-    const calendars = await Calendar.getCalendarsAsync(
-      Calendar.EntityTypes.EVENT
-    );
-    const defaultCalendar = calendars[0];
-
-    const startDate = chosenDate;
-    const endDate = new Date(chosenDate.getTime() + 2 * 60 * 60 * 1000);
-
-    const eventId = await Calendar.createEventAsync(defaultCalendar.id, {
-      title: `Assistir: ${title}`,
-      startDate,
-      endDate,
-      notes: "Adicionado pelo app",
-    });
-
-    Alert.alert("Sucesso", "Filme adicionado ao calendário!");
-    handleClose();
-    return eventId;
   };
 
   const onConfirm = async () => {
@@ -116,9 +54,10 @@ export default function ScheduleModal({
       return;
     }
 
-    const eventId = await addMovieToCalendar(movieTitle, chosenDate);
+    const eventId = await addEvent(`Assistir: ${movieTitle}`, chosenDate);
     if (eventId) {
       onJustMark(eventId);
+      handleClose();
     }
   };
 
@@ -134,12 +73,7 @@ export default function ScheduleModal({
             <View style={{ gap: 8 }}>
               <Text style={styles.modalText}>Adicionar ao calendário?</Text>
               <Button title="Sim" onPress={() => setStep("calendar")} />
-              <Button
-                title="Não"
-                onPress={() => {
-                  handleClose();
-                }}
-              />
+              <Button title="Não" onPress={handleClose} />
             </View>
           ) : (
             <>
@@ -152,7 +86,7 @@ export default function ScheduleModal({
                   const [y, m, d] = day.dateString.split("-").map(Number);
                   setDate(new Date(y, m - 1, d));
                 }}
-                minDate={getTodayString()}
+                minDate={todayString}
                 markedDates={{
                   [`${date.getFullYear()}-${(date.getMonth() + 1)
                     .toString()
@@ -168,10 +102,10 @@ export default function ScheduleModal({
               <View style={styles.timeContainer}>
                 <Picker
                   selectedValue={hour}
-                  onValueChange={(val) => setHour(val)}
+                  onValueChange={setHour}
                   style={{ flex: 1 }}
                 >
-                  {getAvailableHours().map((h) => (
+                  {availableHours.map((h) => (
                     <Picker.Item key={h} label={`${h}:00`} value={h} />
                   ))}
                 </Picker>
@@ -200,11 +134,7 @@ const styles = StyleSheet.create({
     width: "80%",
     position: "relative",
   },
-  closeButton: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-  },
+  closeButton: { position: "absolute", top: 10, right: 10 },
   modalText: {
     marginTop: 32,
     fontSize: 16,
